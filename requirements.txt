@@ -4,3 +4,4 @@ Werkzeug>=2.2.0
 Jinja2>=3.0.0
 itsdangerous>=2.0.0
 click>=8.0.0
+requests>=2.25.0
