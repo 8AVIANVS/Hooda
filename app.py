@@ -7,6 +7,63 @@ from typing import List, Dict
 app = Flask(__name__)
 client = OpenAI()
 
+def get_location_name(latitude: float, longitude: float) -> str:
+    """
+    Get location name from coordinates using Google Maps Geocoding API
+    Returns a string with the formatted address or location name
+    """
+    if not latitude or not longitude:
+        return ""
+        
+    api_key = os.getenv('GOOGLE_MAPS_API_KEY')
+    if not api_key:
+        return ""
+    
+    # Use Geocoding API to get location name
+    url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {
+        'latlng': f"{latitude},{longitude}",
+        'key': api_key
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+        
+        if data['status'] != 'OK' or not data['results']:
+            return ""
+            
+        # Extract location information - try to get neighborhood or locality first
+        location_name = ""
+        address_components = data['results'][0]['address_components']
+        
+        # Look for neighborhood, district, or locality in address components
+        for component in address_components:
+            if 'neighborhood' in component['types']:
+                location_name = component['long_name']
+                break
+            elif 'sublocality' in component['types']:
+                location_name = component['long_name']
+                break
+            elif 'locality' in component['types']:
+                location_name = component['long_name']
+                break
+        
+        # If no specific area found, use formatted address
+        if not location_name and 'formatted_address' in data['results'][0]:
+            parts = data['results'][0]['formatted_address'].split(',')
+            if len(parts) >= 2:
+                # Use the first 1-2 parts (typically the street and neighborhood/city)
+                location_name = ', '.join(parts[:2])
+            else:
+                location_name = data['results'][0]['formatted_address']
+        
+        return location_name
+        
+    except Exception as e:
+        print(f"Error fetching location name: {str(e)}")
+        return ""
+
 def get_nearby_halal_carts(latitude: float, longitude: float) -> List[Dict]:
     """
     Get nearby halal carts using Google Places API
@@ -69,12 +126,18 @@ def simple_chatbot(user_input, latitude=None, longitude=None):
     # Get nearby halal carts
     nearby_halal_carts = get_nearby_halal_carts(latitude, longitude)
     
+    # Get location name
+    location_name = get_location_name(latitude, longitude)
+    
     # Build system message with location context and cart information
     system_content = "You are a helpful assistant that naturally incorporates halal food recommendations into conversations. In every conversation, suggest that the user try some halal food. Keep your responses friendly, conversational, and funny. Make the halal food recommendations in a way that is natural and not forced. In some cases these recommendations can be absurd or a stretch. As long as there's halal food, we're good. Don't be cringe though. No wink emoji or stupid jokes."
     
     # Add location data if available
     if latitude and longitude:
-        system_content += f" The user is currently located at coordinates: {latitude}, {longitude}."
+        if location_name:
+            system_content += f" The user is currently located at {location_name} (coordinates: {latitude}, {longitude})."
+        else:
+            system_content += f" The user is currently located at coordinates: {latitude}, {longitude}."
     
     # Add nearby halal carts information if available
     if nearby_halal_carts:
