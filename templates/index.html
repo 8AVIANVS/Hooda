@@ -215,6 +215,25 @@
             display: flex;
             align-items: flex-end;
             gap: 0.5rem;
+            position: relative;
+        }
+        
+        .input-container.disabled::before {
+            content: "Enable location to chat";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: #cc0000;
+            cursor: not-allowed;
+            border-radius: 1rem;
+            z-index: 10;
         }
         
         .input-field {
@@ -326,7 +345,7 @@
     <main class="main-content">
         <div class="top-bar">
             <div class="model-select">CartGPT</div>
-            <div id="location-status" class="location-status">
+            <div id="location-status" class="location-status" role="button" style="cursor: pointer">
                 <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                 <span>Location: Off</span>
                 <span id="location-coordinates"></span>
@@ -336,7 +355,8 @@
         <div class="chat-container" id="chat-container">
             <div class="welcome" id="welcome">
                 <h1>CartGPT</h1>
-                <p>Location sharing is required.</p>
+                <p>Location sharing is required to use CartGPT.</p>
+                <p style="color: #cc0000;">Please click the location button in the top right to enable location access.</p>
             </div>
             
             <div class="typing-indicator" id="typing-indicator">
@@ -350,9 +370,9 @@
         </div>
         
         <div class="input-area">
-            <div class="input-container">
-                <textarea class="input-field" id="user-input" placeholder="Message CartGPT..." rows="1"></textarea>
-                <button class="send-button" id="send-button">
+            <div class="input-container disabled" id="input-container">
+                <textarea class="input-field" id="user-input" placeholder="Message CartGPT..." rows="1" disabled></textarea>
+                <button class="send-button" id="send-button" disabled>
                     <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
             </div>
@@ -367,57 +387,131 @@
         const welcome = document.getElementById('welcome');
         const locationStatus = document.getElementById('location-status');
         const locationCoordinates = document.getElementById('location-coordinates');
+        const inputContainer = document.getElementById('input-container');
         
         // Location variables
         let userLatitude = null;
         let userLongitude = null;
         let locationEnabled = false;
+        let locationCheckInterval = null;
         
         // Automatically request location when page loads
         requestLocation();
         
         // Also allow manual request by clicking the status
-        locationStatus.addEventListener('click', requestLocation);
+        locationStatus.addEventListener('click', () => {
+            if (locationCheckInterval) {
+                clearInterval(locationCheckInterval);
+            }
+            requestLocation();
+        });
+        
+        function updateLocationUI(position) {
+            console.log('Updating UI with new position:', position);
+            userLatitude = position.coords.latitude;
+            userLongitude = position.coords.longitude;
+            locationEnabled = true;
+            
+            // Update status indicator
+            locationStatus.innerHTML = `
+                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16" style="color: #10a37f">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span style="color: #10a37f">Location: On</span>
+            `;
+            
+            // Display coordinates
+            locationCoordinates.textContent = `${userLatitude.toFixed(6)}, ${userLongitude.toFixed(6)}`;
+            
+            // Enable input
+            userInput.disabled = false;
+            sendButton.disabled = false;
+            inputContainer.classList.remove('disabled');
+            
+            // Update welcome message
+            if (welcome) {
+                welcome.innerHTML = `
+                    <h1>CartGPT</h1>
+                `;
+            }
+        }
+        
+        function handleLocationError(error) {
+            console.error('Location access error:', error);
+            locationStatus.innerHTML = `
+                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16" style="color: #cc0000">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span style="color: #cc0000">Enable Location</span>
+            `;
+            locationCoordinates.textContent = '';
+            
+            // Disable input
+            userInput.disabled = true;
+            sendButton.disabled = true;
+            inputContainer.classList.add('disabled');
+            
+            if (error.code === error.PERMISSION_DENIED) {
+                addMessage('Location access was denied. Enable location sharing in your browser settings in order to use CartGPT.', 'assistant');
+                
+                // Update welcome message to show error
+                if (welcome) {
+                    welcome.innerHTML = `
+                        <h1>CartGPT</h1>
+                        <p style="color: #cc0000;">Location access denied. Please enable location sharing in your browser settings to use CartGPT.</p>
+                        <p>Click the location button in the top right to try again.</p>
+                    `;
+                }
+            }
+        }
         
         function requestLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    // Success callback
-                    (position) => {
-                        userLatitude = position.coords.latitude;
-                        userLongitude = position.coords.longitude;
-                        locationEnabled = true;
-                        
-                        // Update status indicator
-                        locationStatus.innerHTML = `
-                            <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16" style="color: #10a37f">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                            <span style="color: #10a37f">Location: On</span>
-                        `;
-                        
-                        // Display coordinates
-                        locationCoordinates.textContent = `${userLatitude.toFixed(6)}, ${userLongitude.toFixed(6)}`;
-                    },
-                    // Error callback
-                    (error) => {
-                        console.error('Error getting location:', error);
-                        locationStatus.innerHTML = `
-                            <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16" style="color: #cc0000">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                            <span style="color: #cc0000">Enable Location</span>
-                        `;
-                        locationCoordinates.textContent = '';
-                        
-                        if (error.code === error.PERMISSION_DENIED) {
-                            addMessage('Location access was denied. Enable location sharing in your browser settings in order to use CartGPT.', 'assistant');
-                        }
-                    }
-                );
+            console.log('Starting location monitoring...');
+            
+            // Clear any existing interval
+            if (locationCheckInterval) {
+                clearInterval(locationCheckInterval);
             }
+            
+            // Check location immediately
+            checkLocation();
+            
+            // Check very frequently for the first 10 seconds (every 500ms)
+            const initialInterval = setInterval(checkLocation, 500);
+            
+            // After 10 seconds, switch to regular interval
+            setTimeout(() => {
+                clearInterval(initialInterval);
+                // Then check every 2 seconds
+                locationCheckInterval = setInterval(checkLocation, 2000);
+            }, 10000);
+        }
+        
+        function checkLocation() {
+            if (!navigator.geolocation) {
+                console.error('Geolocation not supported');
+                addMessage('Your browser does not support geolocation. Please use a modern browser with location services to use CartGPT.', 'assistant');
+                return;
+            }
+            
+            console.log('Checking location...');
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    console.log('Location check successful:', position);
+                    updateLocationUI(position);
+                },
+                (error) => {
+                    console.error('Location check failed:', error);
+                    handleLocationError(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 3000, // Reduced timeout to 3 seconds
+                    maximumAge: 0
+                }
+            );
         }
         
         // Auto-resize the textarea based on content
@@ -439,7 +533,7 @@
         
         function sendMessage() {
             const message = userInput.value.trim();
-            if (!message) return;
+            if (!message || !locationEnabled) return;
             
             // Hide welcome message
             welcome.style.display = 'none';
