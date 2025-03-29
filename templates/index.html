@@ -51,6 +51,11 @@
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
             color: white;
+            max-width: 200px;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         
         .location-enabled {
@@ -60,6 +65,12 @@
         .location-disabled {
             background-color: #cc0000;
             cursor: pointer;
+        }
+        
+        .location-data {
+            display: block;
+            font-size: 0.7rem;
+            padding-top: 3px;
         }
         
         .chat-container {
@@ -197,7 +208,10 @@
 <body>
     <header>
         <h1>Halal Cart Chatbot</h1>
-        <div id="location-status" class="location-status location-disabled">Location: Off</div>
+        <div id="location-status" class="location-status location-disabled">
+            Location: Off
+            <span id="location-coordinates" class="location-data"></span>
+        </div>
     </header>
     
     <div class="chat-container" id="chat-container">
@@ -205,7 +219,7 @@
             <h2>Welcome to the Halal Cart Chatbot!</h2>
             <p>Ask me anything and I'll help you find the best halal carts in your area!</p>
             <p>Try asking about restaurants, recommendations, or anything else you're curious about.</p>
-            <p><strong>Enable location sharing</strong> to get recommendations for halal carts near you!</p>
+            <p>This site will request your location to provide personalized halal cart recommendations near you.</p>
         </div>
         <div class="typing-indicator" id="typing-indicator">
             <span></span><span></span><span></span>
@@ -224,13 +238,17 @@
         const typingIndicator = document.getElementById('typing-indicator');
         const welcome = document.getElementById('welcome');
         const locationStatus = document.getElementById('location-status');
+        const locationCoordinates = document.getElementById('location-coordinates');
         
         // Location variables
         let userLatitude = null;
         let userLongitude = null;
         let locationEnabled = false;
         
-        // Try to get user's location
+        // Automatically request location when page loads
+        requestLocation();
+        
+        // Also allow manual request by clicking the status
         locationStatus.addEventListener('click', requestLocation);
         
         function requestLocation() {
@@ -243,12 +261,15 @@
                         locationEnabled = true;
                         
                         // Update status indicator
-                        locationStatus.textContent = 'Location: On';
                         locationStatus.classList.remove('location-disabled');
                         locationStatus.classList.add('location-enabled');
+                        locationStatus.textContent = 'Location: On';
+                        
+                        // Display coordinates for testing
+                        locationCoordinates.textContent = `${userLatitude.toFixed(6)}, ${userLongitude.toFixed(6)}`;
                         
                         // Add a system message about location
-                        addMessage('Location sharing enabled! I can now recommend halal carts near your current location.', 'bot');
+                        addMessage(`Location sharing enabled! I can now recommend halal carts near your current location.<br><br>Location data format: WGS84 decimal degrees (standard GPS format)<br>Latitude: ${userLatitude.toFixed(6)}, Longitude: ${userLongitude.toFixed(6)}`, 'bot');
                     },
                     // Error callback
                     (error) => {
@@ -256,15 +277,49 @@
                         locationStatus.textContent = 'Enable Location';
                         locationStatus.classList.add('location-disabled');
                         locationStatus.classList.remove('location-enabled');
+                        locationCoordinates.textContent = '';
                         
                         if (error.code === error.PERMISSION_DENIED) {
                             addMessage('Location access was denied. Enable location sharing in your browser settings to get personalized halal cart recommendations near you.', 'bot');
                         }
+                    },
+                    // Options
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
                     }
                 );
             } else {
                 addMessage('Your browser does not support geolocation. I can still help you find halal carts, but I won\'t be able to tailor recommendations to your current location.', 'bot');
             }
+        }
+        
+        // Set up a watch position to continuously update location
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    userLatitude = position.coords.latitude;
+                    userLongitude = position.coords.longitude;
+                    locationEnabled = true;
+                    
+                    // Update status indicator
+                    locationStatus.classList.remove('location-disabled');
+                    locationStatus.classList.add('location-enabled');
+                    locationStatus.textContent = 'Location: On';
+                    
+                    // Display coordinates for testing
+                    locationCoordinates.textContent = `${userLatitude.toFixed(6)}, ${userLongitude.toFixed(6)}`;
+                },
+                (error) => {
+                    console.error('Watch position error:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 30000
+                }
+            );
         }
         
         // Auto-resize the textarea based on content
@@ -367,13 +422,6 @@
             chatContainer.insertBefore(messageDiv, typingIndicator);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-        
-        // Prompt user to enable location when they first load the page
-        setTimeout(() => {
-            if (!locationEnabled) {
-                addMessage('Enable location sharing to get personalized halal cart recommendations near you. Click the "Location: Off" button in the top right corner to enable.', 'bot');
-            }
-        }, 1500);
     </script>
 </body>
 </html>
