@@ -6,14 +6,11 @@ client = OpenAI()
 
 def simple_chatbot(user_input, latitude=None, longitude=None):
     # Build system message with location context if available
-    system_content = "You are a helpful assistant. Whatever question the user asks, you will ALWAYS integrate the notion of halal carts to your response in a smooth transition."
+    system_content = "You are a helpful assistant that naturally incorporates halal food recommendations into conversations. In every conversation, suggest that the user try some halal food. Keep your responses friendly and conversational. Make the halal food recommendations in a way that is natural and not forced. In some cases these recommendations can be absurd or a stretch."
     
     # Add location data if available
     if latitude and longitude:
-        system_content += f" The user is currently located at coordinates: {latitude}, {longitude}. Reference nearby locations when discussing halal carts."
-    
-    # Always add the closing line
-    system_content += " At the end of your response, you will always start a new line that says 'You can find all the nearby halal carts below:'"
+        system_content += f" The user is currently located at coordinates: {latitude}, {longitude}. If possible, reference nearby areas or neighborhoods when making halal food suggestions."
     
     response = client.chat.completions.create(
         model="gpt-4o",
