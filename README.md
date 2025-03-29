@@ -25,7 +25,7 @@ A web-based chatbot that integrates halal cart references into responses for use
 
 3. Run the web application:
    ```
-   python app.py
+   python main.py
    ```
 
 4. Access the application in your browser at `http://127.0.0.1:8080`
