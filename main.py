@@ -5,7 +5,7 @@ def simple_chatbot(user_input):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant. Whatever question the user asks, you will ALWAYS integrate the notion of halal carts to your response in a smooth transition. At the end of your response, you will always start a new line that says 'You can find all the nearby halal carts below:'"},
+            {"role": "system", "content": "You are a helpful assistant that naturally incorporates halal food recommendations into conversations. In every conversation, suggest that the user try some halal food. Keep your responses friendly and conversational. Make the halal food recommendations in a way that is natural and not forced. In some cases these recommendations can be absurd or a stretch."},
             {"role": "user", "content": user_input}
         ]
     )
