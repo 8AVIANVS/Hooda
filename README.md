@@ -1,14 +1,16 @@
 # Hooda Project - Halal Cart Chatbot
 
-A web-based chatbot that integrates halal cart references into responses for user questions, with location-aware recommendations.
+A web-based chatbot that integrates halal cart references into responses for user questions, with location-aware recommendations and interactive maps.
 
 ## Features
 
 - Clean, modern web interface inspired by ChatGPT
-- Interactive chat experience
-- Responses always include halal cart references
+- Interactive chat experience with session memory
+- Responses always include halal cart references and recommendations
 - Location-aware recommendations using browser geolocation
-- Real-time coordinates display for testing
+- Google Maps integration with clickable links to cart locations
+- Persistent chat history within a browser session
+- "Clear Chat" button to reset conversation
 - Simple Flask-based backend
 
 ## Setup and Installation
@@ -18,9 +20,12 @@ A web-based chatbot that integrates halal cart references into responses for use
    pip install -r requirements.txt
    ```
 
-2. Set up your OpenAI API key:
+2. Set up your environment variables:
+   - Create a `.env` file in the root directory with the following:
    ```
-   export OPENAI_API_KEY=your_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here
+   GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+   FLASK_SECRET_KEY=a_secure_random_string_for_sessions
    ```
 
 3. Run the web application:
@@ -30,17 +35,42 @@ A web-based chatbot that integrates halal cart references into responses for use
 
 4. Access the application in your browser at `http://127.0.0.1:8080`
 
+## API Keys Required
+
+- **OpenAI API Key**: For generating chatbot responses
+- **Google Maps API Key**: For Places API and Geocoding API to find nearby halal carts
+
+## Deployment
+
+This application is configured for Vercel deployment with the following files:
+- `api/index.py`: Entry point for Vercel
+- `vercel.json`: Configuration for routing and server setup
+
 ## Usage
 
-1. When you first access the application, your browser will request permission to access your location
-2. Grant permission to enable location-aware halal cart recommendations
-3. Type your questions or messages in the input field at the bottom of the screen
-4. The chatbot will respond with helpful information that always includes references to halal carts near your location
-5. Your current coordinates are displayed in the top-right corner of the interface
+1. Allow location access when prompted in your browser
+2. Type your questions or comments in the chat input
+3. The chatbot will respond with relevant information and halal food recommendations
+4. Click on the restaurant names to view their location on Google Maps
+5. Use the "Clear Chat" button to start a new conversation
 
-## Location Data
+## Project Structure
 
-- The application uses the HTML5 Geolocation API to detect your precise location
-- Coordinates are sent in WGS84 format (standard GPS decimal degrees)
-- Location data is used only to enhance the AI's responses and is not stored
-- The location permission can be revoked through your browser settings at any time
+- `main.py`: Main application logic and API endpoints
+- `templates/index.html`: Frontend UI and JavaScript
+- `api/index.py`: Vercel deployment entry point
+- `.env`: Environment variables (not included in repository)
+
+## Use Cases
+
+### Halal Food Recommender
+A chatbot that pulls the user's location and subtly suggests nearby halal cart places for every question the user asks. Whether discussing work, entertainment, or any other topic, the bot seamlessly incorporates relevant halal food options in the area, making it easier for users to discover convenient dining options that meet their dietary preferences.
+
+### Fitness Companion
+A chatbot that subtly reminds users of nearby parks, gyms, or running trails while discussing any topic. The bot naturally weaves in suggestions like "If you're feeling stressed about that work deadline, Green Park just 5 minutes from you has a great walking trail that might help clear your mind," encouraging physical activity as part of daily life without being pushy.
+
+### Language Learning Support
+A chatbot that recommends nearby cultural events, language exchanges, or authentic restaurants related to the language being learned. While helping with vocabulary or grammar questions, it might mention "There's actually a Spanish film festival this weekend at Cinema Arts just 10 minutes from you" or "If you want to practice ordering in French, Petit Café on Oak Street has native French-speaking staff," creating real-world immersion opportunities.
+
+### Networking Assistant
+A chatbot for professionals that recommends relevant local meetups, conferences, or coworking spaces based on career interests discussed. During conversations about industry challenges or career goals, it might suggest "There's a tech networking event at Innovation Hub tomorrow evening, just 3 blocks from your location" or "Many remote workers in your field meet at The Common Space cafe on Thursdays, which is near you," helping users build professional connections in their area.
