@@ -4,9 +4,6 @@ A web-based chatbot that integrates halal cart references into responses for use
 
 ## Why You Need This Beyond the Fulfillment of Your Unrestrained Appetite
 
-### Halal Food Recommender
-A chatbot that pulls the user's location and subtly suggests nearby halal cart places for every question the user asks. Whether discussing work, entertainment, or any other topic, the bot seamlessly incorporates relevant halal food options in the area, making it easier for users to discover convenient dining options that meet their dietary preferences.
-
 ### Fitness Companion
 A chatbot that subtly reminds users of nearby parks, gyms, or running trails while discussing any topic. The bot naturally weaves in suggestions like "If you're feeling stressed about that work deadline, Green Park just 5 minutes from you has a great walking trail that might help clear your mind," encouraging physical activity as part of daily life without being pushy.
 
