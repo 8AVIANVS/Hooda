@@ -2,16 +2,31 @@ from flask import Flask, render_template, request, jsonify, session
 from openai import OpenAI
 import requests
 import os
-from typing import List, Dict
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
+import string
+from typing import List, Dict
+from dotenv import load_dotenv
 
-app = Flask(__name__)
+# Load environment variables
+load_dotenv()
+
+# Initialize Flask app
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24).hex())
+
+# Set up session configuration - sessions expire after 1 day
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
+
 client = OpenAI()
 
 # In-memory storage for chat sessions (in production, use a database)
 chat_sessions = {}
+
+# Clean up old sessions occasionally
+last_cleanup = datetime.now()
+CLEANUP_INTERVAL = timedelta(hours=24)
 
 def get_location_name(latitude: float, longitude: float) -> str:
     """

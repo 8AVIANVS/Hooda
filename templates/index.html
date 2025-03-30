@@ -146,24 +146,33 @@
         }
         
         .avatar {
-            width: 2rem;
-            height: 2rem;
-            border-radius: 0.25rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 500;
+            font-weight: bold;
             flex-shrink: 0;
-            font-size: 0.875rem;
+            margin-right: 16px;
+            font-size: 14px;
         }
         
         .avatar.user {
-            background: #9b5de5;
+            background-color: #10a37f;
+            color: white;
         }
         
         .avatar.assistant {
-            background: #19c37d;
+            background-color: #ECECF1;
+            color: #6B7280;
+        }
+        
+        .avatar.assistant img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
         }
         
         .message-content {
@@ -695,7 +704,22 @@
             
             const avatar = document.createElement('div');
             avatar.classList.add('avatar', sender);
-            avatar.textContent = sender === 'user' ? 'U' : 'A';
+            
+            if (sender === 'user') {
+                avatar.textContent = 'U';
+            } else {
+                // Use the halalCart.png image for the assistant
+                const avatarImg = document.createElement('img');
+                avatarImg.src = '/static/halalCart.png';
+                avatarImg.alt = 'CartGPT';
+                avatarImg.onerror = function() {
+                    console.error('Failed to load avatar image');
+                    this.src = ''; // Clear the broken image
+                    avatar.textContent = 'C'; // Fallback to text
+                };
+                avatar.textContent = '';
+                avatar.appendChild(avatarImg);
+            }
             
             const messageContent = document.createElement('div');
             messageContent.classList.add('message-content');

@@ -16,6 +16,9 @@ app = flask_app
 def catch_all(path):
     if path == '':
         return send_from_directory('../templates', 'index.html')
+    # Handle static files
+    if path.startswith('static/'):
+        return send_from_directory('../', path)
     return send_from_directory('../', path)
 
 # This is needed for Vercel
