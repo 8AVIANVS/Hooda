@@ -466,6 +466,12 @@
             sendButton.disabled = false;
             inputContainer.classList.remove('disabled');
             
+            // Remove location warning if it exists
+            const locationWarning = chatContainer.querySelector('.location-warning');
+            if (locationWarning) {
+                chatContainer.removeChild(locationWarning);
+            }
+            
             // Hide welcome message if there are messages
             if (chatContainer.children.length > 1) {
                 welcome.style.display = 'none';
