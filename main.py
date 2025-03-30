@@ -173,4 +173,5 @@ def chat():
 
 if __name__ == '__main__':
     # Listen on all interfaces (0.0.0.0) and use port 8080
+    # This is only used for local development
     app.run(host='0.0.0.0', port=8080, debug=True)
