@@ -106,7 +106,7 @@ def get_nearby_halal_carts(latitude: float, longitude: float) -> List[Dict]:
             details_url = "https://maps.googleapis.com/maps/api/place/details/json"
             details_params = {
                 'place_id': place_id,
-                'fields': 'name,rating,reviews,formatted_address,opening_hours',
+                'fields': 'name,rating,reviews,formatted_address,opening_hours,geometry',
                 'key': api_key
             }
             
@@ -115,12 +115,20 @@ def get_nearby_halal_carts(latitude: float, longitude: float) -> List[Dict]:
             
             if details_data['status'] == 'OK':
                 place_details = details_data['result']
+                # Create Google Maps URL for the place
+                maps_url = ""
+                if 'geometry' in place_details and 'location' in place_details['geometry']:
+                    lat = place_details['geometry']['location']['lat']
+                    lng = place_details['geometry']['location']['lng']
+                    maps_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}&query_place_id={place_id}"
+                
                 places.append({
                     'name': place_details.get('name', ''),
                     'rating': place_details.get('rating', 0),
                     'reviews': place_details.get('reviews', []),
                     'address': place_details.get('formatted_address', ''),
-                    'is_open': place_details.get('opening_hours', {}).get('open_now', False)
+                    'is_open': place_details.get('opening_hours', {}).get('open_now', False),
+                    'maps_url': maps_url
                 })
         
         return places
@@ -149,7 +157,14 @@ def simple_chatbot(user_input, chat_history, latitude=None, longitude=None):
     if nearby_halal_carts:
         system_content += "\nNearby halal food options:\n"
         for cart in nearby_halal_carts:
-            system_content += f"- {cart['name']} (Rating: {cart['rating']}, Address: {cart['address']}, Open: {'Yes' if cart['is_open'] else 'No'})\n"
+            # Include a markdown-formatted link if we have a maps URL
+            if cart['maps_url']:
+                system_content += f"- [{cart['name']}]({cart['maps_url']}) (Rating: {cart['rating']}, Address: {cart['address']}, Open: {'Yes' if cart['is_open'] else 'No'})\n"
+            else:
+                system_content += f"- {cart['name']} (Rating: {cart['rating']}, Address: {cart['address']}, Open: {'Yes' if cart['is_open'] else 'No'})\n"
+        
+        # Add instruction to use markdown links in the response
+        system_content += "\nWhen mentioning these halal food places in your responses, include clickable links using markdown format like this: [Restaurant Name](URL). The user will see these as hyperlinks."
     
     # Build messages list with system prompt and chat history
     messages = [
