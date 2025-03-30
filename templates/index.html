@@ -49,8 +49,39 @@
         }
 
         .model-select {
-            font-weight: 500;
-            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .location-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .clear-btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .clear-btn:hover {
+            background-color: #f3f4f6;
+            color: var(--text-primary);
         }
         
         /* Sidebar styles */
@@ -275,14 +306,6 @@
             cursor: not-allowed;
         }
         
-        .location-status {
-            font-size: 12px;
-            color: #666;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
         /* Welcome screen */
         .welcome {
             text-align: center;
@@ -345,10 +368,12 @@
     <main class="main-content">
         <div class="top-bar">
             <div class="model-select">CartGPT</div>
-            <div id="location-status" class="location-status" role="button" style="cursor: pointer">
-                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                <span>Location: Off</span>
-                <span id="location-coordinates"></span>
+            <div class="controls">
+                <button class="clear-btn" id="clearChat">Clear Chat</button>
+                <div class="location-info">
+                    <span id="location-status">Requesting location...</span>
+                    <span id="coordinates"></span>
+                </div>
             </div>
         </div>
         
@@ -371,8 +396,8 @@
         
         <div class="input-area">
             <div class="input-container disabled" id="input-container">
-                <textarea class="input-field" id="user-input" placeholder="Message CartGPT..." rows="1" disabled></textarea>
-                <button class="send-button" id="send-button" disabled>
+                <textarea class="input-field" id="userInput" placeholder="Message CartGPT..." rows="1" disabled></textarea>
+                <button class="send-button" id="sendButton" disabled>
                     <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
             </div>
@@ -381,15 +406,16 @@
     
     <script>
         const chatContainer = document.getElementById('chat-container');
-        const userInput = document.getElementById('user-input');
-        const sendButton = document.getElementById('send-button');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
         const typingIndicator = document.getElementById('typing-indicator');
         const welcome = document.getElementById('welcome');
         const locationStatus = document.getElementById('location-status');
-        const locationCoordinates = document.getElementById('location-coordinates');
+        const coordinatesDisplay = document.getElementById('coordinates');
+        const clearChatButton = document.getElementById('clearChat');
         const inputContainer = document.getElementById('input-container');
         
-        // Location variables
+        // Variables to hold our data
         let userLatitude = null;
         let userLongitude = null;
         let locationEnabled = false;
@@ -406,10 +432,12 @@
             requestLocation();
         });
         
+        // Function to update the UI with location information
         function updateLocationUI(position) {
             console.log('Updating UI with new position:', position);
             userLatitude = position.coords.latitude;
             userLongitude = position.coords.longitude;
+            
             locationEnabled = true;
             
             // Update status indicator
@@ -422,48 +450,48 @@
             `;
             
             // Display coordinates
-            locationCoordinates.textContent = `${userLatitude.toFixed(6)}, ${userLongitude.toFixed(6)}`;
+            coordinatesDisplay.textContent = `${userLatitude.toFixed(6)}, ${userLongitude.toFixed(6)}`;
             
             // Enable input
             userInput.disabled = false;
             sendButton.disabled = false;
             inputContainer.classList.remove('disabled');
             
-            // Update welcome message
-            if (welcome) {
-                welcome.innerHTML = `
-                    <h1>CartGPT</h1>
-                `;
+            // Hide welcome message if there are messages
+            if (chatContainer.children.length > 1) {
+                welcome.style.display = 'none';
             }
         }
-        
+
+        // Function to handle location error
         function handleLocationError(error) {
             console.error('Location access error:', error);
             locationStatus.innerHTML = `
                 <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="16" width="16" style="color: #cc0000">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
                 <span style="color: #cc0000">Enable Location</span>
             `;
-            locationCoordinates.textContent = '';
+            coordinatesDisplay.textContent = '';
             
             // Disable input
             userInput.disabled = true;
             sendButton.disabled = true;
             inputContainer.classList.add('disabled');
             
-            if (error.code === error.PERMISSION_DENIED) {
-                addMessage('Location access was denied. Enable location sharing in your browser settings in order to use CartGPT.', 'assistant');
-                
-                // Update welcome message to show error
-                if (welcome) {
-                    welcome.innerHTML = `
-                        <h1>CartGPT</h1>
-                        <p style="color: #cc0000;">Location access denied. Please enable location sharing in your browser settings to use CartGPT.</p>
-                        <p>Click the location button in the top right to try again.</p>
-                    `;
-                }
+            // Display warning
+            if (chatContainer.querySelector('.location-warning') === null) {
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'message-wrapper assistant location-warning';
+                warningDiv.innerHTML = `
+                    <div class="message assistant">
+                        <div class="message-content">⚠️ Please enable location access for personalized halal food recommendations near you.</div>
+                    </div>
+                `;
+                chatContainer.appendChild(warningDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
         
@@ -489,30 +517,93 @@
             }, 10000);
         }
         
+        // Check for location permission on page load
         function checkLocation() {
             if (!navigator.geolocation) {
                 console.error('Geolocation not supported');
-                addMessage('Your browser does not support geolocation. Please use a modern browser with location services to use CartGPT.', 'assistant');
+                handleLocationError({ code: 0, message: 'Geolocation not supported' });
                 return;
             }
             
-            console.log('Checking location...');
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    console.log('Location check successful:', position);
+                position => {
+                    console.log('Got position:', position);
                     updateLocationUI(position);
                 },
-                (error) => {
-                    console.error('Location check failed:', error);
+                error => {
+                    console.error('Geolocation error:', error);
                     handleLocationError(error);
                 },
                 {
                     enableHighAccuracy: true,
-                    timeout: 3000, // Reduced timeout to 3 seconds
-                    maximumAge: 0
+                    timeout: 10000,
+                    maximumAge: 10000
                 }
             );
         }
+        
+        // Load chat history when the page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            loadChatHistory();
+        });
+        
+        // Function to load chat history from the server
+        function loadChatHistory() {
+            fetch('/get_history')
+                .then(response => response.json())
+                .then(data => {
+                    const history = data.history;
+                    
+                    // Skip if there's no history
+                    if (!history || history.length === 0) {
+                        return;
+                    }
+                    
+                    // Clear existing messages (if any)
+                    chatContainer.innerHTML = '';
+                    
+                    // Add each message to the UI
+                    for (let i = 0; i < history.length; i++) {
+                        const message = history[i];
+                        // Skip the first user message if it's immediately followed by an assistant message
+                        if (i === 0 && message.role === 'user' && history.length > 1 && history[1].role === 'assistant') {
+                            addMessage(message.content, 'user', false);
+                        } else {
+                            addMessage(message.content, message.role, false);
+                        }
+                    }
+                    
+                    // Scroll to the bottom
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                })
+                .catch(error => {
+                    console.error('Error loading chat history:', error);
+                });
+        }
+        
+        // Clear chat history
+        clearChatButton.addEventListener('click', function() {
+            // First confirm with the user
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                // Send request to clear history
+                fetch('/clear_history', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Clear the UI
+                    chatContainer.innerHTML = '';
+                    // Add a welcome message
+                    addMessage('Hi there! I\'m CartGPT, your friendly neighborhood halal food guide. How can I help you today?', 'assistant');
+                })
+                .catch(error => {
+                    console.error('Error clearing chat history:', error);
+                });
+            }
+        });
         
         // Auto-resize the textarea based on content
         userInput.addEventListener('input', function() {
@@ -559,7 +650,7 @@
                 message: message
             };
             
-            if (locationEnabled && userLatitude && userLongitude) {
+            if (userLatitude && userLongitude) {
                 data.latitude = userLatitude;
                 data.longitude = userLongitude;
             }
@@ -595,7 +686,7 @@
             });
         }
         
-        function addMessage(content, sender) {
+        function addMessage(content, sender, scrollToBottom = true) {
             const wrapper = document.createElement('div');
             wrapper.classList.add('message-wrapper', sender);
             
@@ -671,11 +762,10 @@
             wrapper.appendChild(messageDiv);
             
             chatContainer.insertBefore(wrapper, typingIndicator);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            if (scrollToBottom) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
         }
-        
-        // Hide send button initially
-        sendButton.style.display = 'none';
     </script>
 </body>
 </html>

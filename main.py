@@ -1,11 +1,17 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 from openai import OpenAI
 import requests
 import os
 from typing import List, Dict
+import uuid
+from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24).hex())
 client = OpenAI()
+
+# In-memory storage for chat sessions (in production, use a database)
+chat_sessions = {}
 
 def get_location_name(latitude: float, longitude: float) -> str:
     """
@@ -122,7 +128,7 @@ def get_nearby_halal_carts(latitude: float, longitude: float) -> List[Dict]:
         print(f"Error fetching halal carts: {str(e)}")
         return []
 
-def simple_chatbot(user_input, latitude=None, longitude=None):
+def simple_chatbot(user_input, chat_history, latitude=None, longitude=None):
     # Get nearby halal carts
     nearby_halal_carts = get_nearby_halal_carts(latitude, longitude)
     
@@ -130,7 +136,7 @@ def simple_chatbot(user_input, latitude=None, longitude=None):
     location_name = get_location_name(latitude, longitude)
     
     # Build system message with location context and cart information
-    system_content = "You are a helpful assistant that naturally incorporates halal food recommendations into conversations. In every conversation, suggest that the user try some halal food. Keep your responses friendly, conversational, and funny. Make the halal food recommendations in a way that is natural and not forced. In some cases these recommendations can be absurd or a stretch. As long as there's halal food, we're good. Don't be cringe though. No wink emoji or stupid jokes."
+    system_content = "You are a helpful assistant that naturally incorporates halal food recommendations into conversations. In every conversation, suggest that the user try some halal food. Keep your responses friendly, conversational, and funny. Make the halal food recommendations in a way that is natural and not forced. In some cases these recommendations can be absurd or a stretch. As long as there's halal food, we're good."
     
     # Add location data if available
     if latitude and longitude:
@@ -145,17 +151,43 @@ def simple_chatbot(user_input, latitude=None, longitude=None):
         for cart in nearby_halal_carts:
             system_content += f"- {cart['name']} (Rating: {cart['rating']}, Address: {cart['address']}, Open: {'Yes' if cart['is_open'] else 'No'})\n"
     
+    # Build messages list with system prompt and chat history
+    messages = [
+        {"role": "system", "content": system_content}
+    ]
+    
+    # Add chat history to messages
+    messages.extend(chat_history)
+    
+    # Add current user message
+    messages.append({"role": "user", "content": user_input})
+    
     response = client.chat.completions.create(
         model="gpt-4",
-        messages=[
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": user_input}
-        ]
+        messages=messages
     )
-    return response.choices[0].message.content
+    
+    # Return both the response content and updated chat history
+    response_content = response.choices[0].message.content
+    
+    # Add the user's message and assistant's response to chat history
+    chat_history.append({"role": "user", "content": user_input})
+    chat_history.append({"role": "assistant", "content": response_content})
+    
+    return response_content
 
 @app.route('/')
 def index():
+    # Generate a new session ID if one doesn't exist
+    if 'session_id' not in session:
+        session['session_id'] = str(uuid.uuid4())
+        # Initialize an empty chat session
+        chat_sessions[session['session_id']] = {
+            'history': [],
+            'created_at': datetime.now().isoformat(),
+            'last_activity': datetime.now().isoformat()
+        }
+    
     return render_template('index.html')
 
 @app.route('/chat', methods=['POST'])
@@ -168,10 +200,68 @@ def chat():
     if not user_message:
         return jsonify({'error': 'No message provided'}), 400
     
-    response = simple_chatbot(user_message, latitude, longitude)
+    # Get or create session
+    session_id = session.get('session_id')
+    if not session_id or session_id not in chat_sessions:
+        session_id = str(uuid.uuid4())
+        session['session_id'] = session_id
+        chat_sessions[session_id] = {
+            'history': [],
+            'created_at': datetime.now().isoformat(),
+            'last_activity': datetime.now().isoformat()
+        }
+    
+    # Get chat history for this session
+    chat_history = chat_sessions[session_id]['history']
+    
+    # Update last activity timestamp
+    chat_sessions[session_id]['last_activity'] = datetime.now().isoformat()
+    
+    # Get response from chatbot
+    response = simple_chatbot(user_message, chat_history, latitude, longitude)
+    
+    # Store updated chat history
+    chat_sessions[session_id]['history'] = chat_history
+    
+    # Clean up old sessions (optional - in a production app you'd do this in a background task)
+    clean_old_sessions()
+    
     return jsonify({'response': response})
+
+@app.route('/get_history', methods=['GET'])
+def get_history():
+    session_id = session.get('session_id')
+    if not session_id or session_id not in chat_sessions:
+        return jsonify({'history': []})
+    
+    return jsonify({
+        'history': chat_sessions[session_id]['history']
+    })
+
+@app.route('/clear_history', methods=['POST'])
+def clear_history():
+    session_id = session.get('session_id')
+    if session_id and session_id in chat_sessions:
+        chat_sessions[session_id]['history'] = []
+    
+    return jsonify({'status': 'success'})
+
+def clean_old_sessions():
+    """Remove chat sessions that are older than 24 hours (to prevent memory leaks)"""
+    now = datetime.now()
+    sessions_to_remove = []
+    
+    for session_id, session_data in chat_sessions.items():
+        # Parse the ISO format timestamp
+        last_activity = datetime.fromisoformat(session_data['last_activity'])
+        # Check if the session is older than 24 hours
+        if (now - last_activity).total_seconds() > 86400:  # 24 hours in seconds
+            sessions_to_remove.append(session_id)
+    
+    # Remove old sessions
+    for session_id in sessions_to_remove:
+        del chat_sessions[session_id]
 
 if __name__ == '__main__':
     # Listen on all interfaces (0.0.0.0) and use port 8080
-    # This is only used for local development
     app.run(host='0.0.0.0', port=8080, debug=True)
