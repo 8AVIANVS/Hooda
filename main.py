@@ -86,7 +86,7 @@ def get_nearby_halal_carts(latitude: float, longitude: float) -> List[Dict]:
     url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
     params = {
         'location': f"{latitude},{longitude}",
-        'radius': 5000,
+        'radius': 2000,
         'type': 'restaurant',
         'keyword': 'halal',
         'key': api_key
