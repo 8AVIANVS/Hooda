@@ -321,18 +321,24 @@
             max-width: 600px;
             margin: 48px auto;
             padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         
         .welcome h1 {
             font-size: 32px;
             margin-bottom: 24px;
             color: var(--text-primary);
+            width: 100%;
         }
         
         .welcome p {
             color: #666;
             margin-bottom: 16px;
             line-height: 1.6;
+            width: 100%;
         }
         
         /* Typing indicator */
@@ -390,7 +396,7 @@
             <div class="welcome" id="welcome">
                 <h1>CartGPT</h1>
                 <p>Location sharing is required to use CartGPT.</p>
-                <p style="color: #cc0000;">Please click the location button in the top right to enable location access.</p>
+                <p id="location-instruction" style="color: #cc0000;">Please click the location button in the top right to enable location access.</p>
             </div>
             
             <div class="typing-indicator" id="typing-indicator">
@@ -472,9 +478,20 @@
                 chatContainer.removeChild(locationWarning);
             }
             
-            // Hide welcome message if there are messages
-            if (chatContainer.children.length > 1) {
+            // Hide location instruction since location is now enabled
+            const locationInstruction = document.getElementById('location-instruction');
+            if (locationInstruction) {
+                locationInstruction.style.display = 'none';
+            }
+            
+            // Only hide welcome message if there are actual chat messages
+            // Count only user and assistant messages, not location warnings
+            const actualMessageCount = chatContainer.querySelectorAll('.message-wrapper.user, .message-wrapper.assistant:not(.location-warning)').length;
+            if (actualMessageCount > 0) {
                 welcome.style.display = 'none';
+            } else {
+                // Make sure welcome is visible if no messages yet
+                welcome.style.display = 'flex';
             }
         }
 
@@ -641,10 +658,10 @@
             const message = userInput.value.trim();
             if (!message || !locationEnabled) return;
             
-            // Hide welcome message
+            // Hide welcome message when sending first message
             welcome.style.display = 'none';
             
-            // Add user message to chat
+            // Add user message to the chat
             addMessage(message, 'user');
             
             // Clear input and reset height
